@@ -344,7 +344,7 @@
     </section>
 
     <div id="calendar-day-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;align-items:center;justify-content:center;">
-      <div style="background:#fff;border-radius:10px;padding:24px;max-width:600px;width:92%;max-height:85vh;overflow-y:auto;">
+      <div style="background:#fff;border-radius:10px;padding:24px;max-width:760px;width:92%;max-height:85vh;overflow-y:auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
           <div id="calendar-day-modal-title" style="font-weight:600;font-size:16px;"></div>
           <button class="btn btn-secondary btn-sm" onclick="closeCalendarDayModal()">Close</button>
@@ -704,6 +704,11 @@
           <select class="form-input" id="giftcard-issuer-filter" style="max-width:240px;" onchange="renderGiftCardsScreen()">
             <option value="">All (any issuer/purchaser)</option>
           </select>
+          <select class="form-input" id="giftcard-status-filter" style="max-width:200px;" onchange="renderGiftCardsScreen()">
+            <option value="">All statuses</option>
+            <option value="active">Not yet redeemed</option>
+            <option value="redeemed">Redeemed</option>
+          </select>
           <input type="text" class="form-input" id="giftcard-code-search" placeholder="Search by code or name" style="max-width:240px;" oninput="renderGiftCardsScreen()">
         </div>
         <div id="giftcard-issued-list"></div>
@@ -730,14 +735,10 @@
 
       <div class="panel" style="margin-top:16px;">
         <div class="panel-title">Email</div>
-        <div id="acct-email-error" class="giftcard-error"></div>
-        <div id="acct-email-pending" class="giftcard-success" style="display:none;"></div>
-        <div class="reminder-row">
+        <div class="form-field">
           <input type="email" class="form-input" id="acct-email-current" disabled style="opacity:0.7;">
-          <input type="email" class="form-input" id="acct-email-new" placeholder="New email address">
         </div>
-        <button class="btn btn-primary" onclick="requestAccountEmailChange()" style="margin-top:10px;">Change email</button>
-        <div style="font-size:12.5px;color:var(--text-secondary);margin-top:8px;">You'll get a confirmation link at the new address — the change only takes effect once you click it.</div>
+        <div style="font-size:12.5px;color:var(--text-secondary);">Email can't be changed here — contact support if this needs to be updated. Name, phone, and password can be changed below.</div>
       </div>
 
       <div class="panel" style="margin-top:16px;">
@@ -1182,7 +1183,6 @@ function renderAccountSettings() {
   document.getElementById('acct-full-name').value = pilotProfile.full_name || '';
   document.getElementById('acct-phone').value = pilotProfile.phone || '';
   document.getElementById('acct-email-current').value = pilotProfile.email || '';
-  document.getElementById('acct-email-new').value = '';
 }
 
 async function saveAccountProfile() {
@@ -1338,10 +1338,17 @@ async function renderGiftCardsScreen() {
   issuerFilterEl.value = currentFilterValue;
 
   const issuerFilter = issuerFilterEl.value;
+  const statusFilter = document.getElementById('giftcard-status-filter').value;
   const searchText = document.getElementById('giftcard-code-search').value.trim().toLowerCase();
 
   const filtered = allGiftCardsCache.filter(c => {
     if (issuerFilter && c.issued_by !== issuerFilter) return false;
+    // Matches the same binary treatment already used in the display
+    // line below ('active' = not yet redeemed, anything else =
+    // redeemed) — not introducing a second, differently-defined notion
+    // of "redeemed" alongside the one already shown per card.
+    if (statusFilter === 'active' && c.status !== 'active') return false;
+    if (statusFilter === 'redeemed' && c.status === 'active') return false;
     if (searchText) {
       const haystack = [c.code, c.recipient_name, c.purchaser_name, peopleNames[c.purchased_by], peopleNames[c.issued_by]]
         .filter(Boolean).join(' ').toLowerCase();
